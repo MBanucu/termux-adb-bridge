@@ -1,11 +1,3 @@
-# build output
-out/
-
-# signing material: generate your own with build.sh, never publish it
-keystore.jks
-*.jks
-*.keystore
-
-# local APKs
-*.apk
-*.idsig
+# nix build output
+result
+result-*

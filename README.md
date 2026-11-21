@@ -57,7 +57,34 @@ The signing key is created once at `keystore.jks` **outside** `out/`, so rebuild
 the same signature and `adb install -r` keeps working. It is git-ignored on purpose:
 regenerate your own rather than trusting this one.
 
+### Build with Nix
+
+An x86_64 Nix host can build the same APK reproducibly, no phone or Android Studio needed:
+
+```console
+$ nix build github:MBanucu/termux-adb-bridge        # -> termux-adb-bridge-unsigned.apk
+```
+
+The flake pulls the Android SDK from nixpkgs (`composeAndroidPackages`, build-tools
+35.0.0, platform 35), so it needs `allowUnfree` and `android_sdk.accept_license`, which
+the flake sets for its own package set. `d8` and `apksigner` are invoked as jars, because
+Google ships them as `/bin/sh` wrappers that do not exist in the Nix sandbox.
+
+The output is **unsigned** on purpose: signing is a separate step so the build stays
+reproducible and no private key lands in the Nix store.
+
 ## Install
+
+From Nix, signing and installing are one step:
+
+```console
+$ nix run github:MBanucu/termux-adb-bridge
+```
+
+That creates a key at `~/.local/share/termux-adb-bridge/keystore.jks` if needed, signs
+the APK, installs it (uninstalling a differently-signed copy first, which is what happens
+if you previously built it on the phone), and grants the Termux permission. Everything
+below is the manual equivalent.
 
 A locally built, self-signed APK trips Google Play Protect ("built for an older version
 of Android") when `targetSdkVersion` is low, so the manifest targets 35. If Play Protect
