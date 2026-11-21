@@ -3,25 +3,55 @@
 # printing its output and returning its exit status. No SSH or root needed.
 #
 # Path: adb -> com.termux.adbbridge (helper APK) -> Termux RUN_COMMAND -> sh -c
+#
+# The phone may be attached over USB and Wi-Fi at once, in which case plain adb
+# fails with "more than one device"; set PHONE_SERIAL to choose, otherwise USB is
+# preferred and the only device is used when there is just one.
 set -uo pipefail
 
 if [ $# -lt 1 ]; then
   echo "usage: phone-cmd '<shell command>'" >&2
+  echo "  PHONE_SERIAL=<serial|ip:port> to pick a transport when several are attached" >&2
   exit 2
+fi
+
+pick_device() {
+  if [ -n "${PHONE_SERIAL:-}" ]; then
+    echo "$PHONE_SERIAL"
+    return 0
+  fi
+  local devices count usb
+  devices=$(adb devices | awk 'NR>1 && $2 == "device" { print $1 }')
+  count=$(printf '%s\n' "$devices" | grep -c . || true)
+  case "$count" in
+    0) return 1 ;;
+    1) printf '%s\n' "$devices"; return 0 ;;
+  esac
+  usb=$(printf '%s\n' "$devices" | grep -v ':' | head -n 1 || true)
+  if [ -n "$usb" ]; then
+    echo "$usb"
+  else
+    printf '%s\n' "$devices" | head -n 1
+  fi
+}
+
+if ! serial=$(pick_device); then
+  echo "error: no adb device. Plug the phone in, or: adb connect <ip>:<port>" >&2
+  exit 1
 fi
 
 OUT="/sdcard/.phone-cmd.$$"
 esc() { printf '%s' "$1" | sed "s/'/'\\\\''/g"; }
 
 CMD="{ $1 ; } > $OUT 2>&1; echo \$? > $OUT.rc"
-adb shell "am start -n com.termux.adbbridge/.Bridge --es cmd '$(esc "$CMD")'" >/dev/null 2>&1
+adb -s "$serial" shell "am start -n com.termux.adbbridge/.Bridge --es cmd '$(esc "$CMD")'" >/dev/null 2>&1
 
 for _ in $(seq 1 80); do
-  adb shell "[ -f $OUT.rc ]" >/dev/null 2>&1 && break
+  adb -s "$serial" shell "[ -f $OUT.rc ]" >/dev/null 2>&1 && break
   sleep 0.25
 done
 
-adb shell cat "$OUT" 2>/dev/null
-rc=$(adb shell cat "$OUT.rc" 2>/dev/null | tr -dc '0-9')
-adb shell rm -f "$OUT" "$OUT.rc" >/dev/null 2>&1
+adb -s "$serial" shell cat "$OUT" 2>/dev/null
+rc=$(adb -s "$serial" shell cat "$OUT.rc" 2>/dev/null | tr -dc '0-9')
+adb -s "$serial" shell rm -f "$OUT" "$OUT.rc" >/dev/null 2>&1
 exit "${rc:-1}"
