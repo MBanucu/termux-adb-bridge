@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# phone-cmd '<shell command>' — run a command inside Termux from the PC over adb,
+# printing its output and returning its exit status. No SSH or root needed.
+#
+# Path: adb -> com.termux.adbbridge (helper APK) -> Termux RUN_COMMAND -> sh -c
+set -uo pipefail
+
+if [ $# -lt 1 ]; then
+  echo "usage: phone-cmd '<shell command>'" >&2
+  exit 2
+fi
+
+OUT="/sdcard/.phone-cmd.$$"
+esc() { printf '%s' "$1" | sed "s/'/'\\\\''/g"; }
+
+CMD="{ $1 ; } > $OUT 2>&1; echo \$? > $OUT.rc"
+adb shell "am start -n com.termux.adbbridge/.Bridge --es cmd '$(esc "$CMD")'" >/dev/null 2>&1
+
+for _ in $(seq 1 80); do
+  adb shell "[ -f $OUT.rc ]" >/dev/null 2>&1 && break
+  sleep 0.25
+done
+
+adb shell cat "$OUT" 2>/dev/null
+rc=$(adb shell cat "$OUT.rc" 2>/dev/null | tr -dc '0-9')
+adb shell rm -f "$OUT" "$OUT.rc" >/dev/null 2>&1
+exit "${rc:-1}"

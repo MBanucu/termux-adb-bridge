@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.termux.adbbridge"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="35" />
+
+    <!-- Caller must hold this to talk to Termux's RunCommandService.
+         Granted to this app via: adb shell pm grant com.termux.adbbridge com.termux.permission.RUN_COMMAND -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <application
+        android:label="Termux ADB Bridge"
+        android:allowBackup="false">
+
+        <!-- Guarded by android.permission.DUMP: adb shell holds it, ordinary apps do not. -->
+        <activity
+            android:name=".Bridge"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.termux.adbbridge.RUN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
