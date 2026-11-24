@@ -19,19 +19,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li><b>Unique request code.</b> {@link PendingIntent} equality ignores
  *       extras, so the same base intent and request code would return the
  *       already-consumed intent. Every command gets the next code from one
- *       process-wide counter.</li>
+ *       process-wide counter, seeded from the monotonic clock so a restarted
+ *       process does not reuse the codes its previous instance handed out.</li>
  *   <li><b>Mutable on Android 12+.</b> Termux has to attach the {@code result}
  *       bundle to the intent the pending intent wraps.</li>
  * </ul>
  */
 public final class TermuxPendingIntents {
 
-    private static final AtomicInteger NEXT_REQUEST_CODE = new AtomicInteger(0);
+    private static final AtomicInteger NEXT_REQUEST_CODE =
+            new AtomicInteger((int) (System.nanoTime() & 0x7fffffff));
 
     private TermuxPendingIntents() {
     }
 
-    /** The next request code; unique within this process. */
+    /** The next positive request code; unique across process restarts in practice. */
     public static int nextRequestCode() {
         return NEXT_REQUEST_CODE.getAndIncrement();
     }

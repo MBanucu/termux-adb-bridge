@@ -23,13 +23,19 @@ echo "--- aapt2 link ---"
 
 echo "--- javac ---"
 # Bridge and the two library modules; keep the source level at 8 so the same
-# files compile here and in the Gradle build.
-javac -source 8 -target 8 -bootclasspath "$ANDROID_JAR" \
-      -d out/classes \
-      src/com/termux/adbbridge/Bridge.java \
-      termux-result/src/main/java/io/github/mbanucu/termux/*.java \
-      termux-run-command/src/main/java/io/github/mbanucu/termux/*.java \
-      2>&1 | grep -v "^warning:" || true
+# files compile here and in the Gradle build. Capture the compiler output rather
+# than piping it through grep: a pipeline would hide a failed javac and let the
+# build package whatever old classes happened to be there.
+if ! javac -source 8 -target 8 -bootclasspath "$ANDROID_JAR" \
+        -d out/classes \
+        src/com/termux/adbbridge/Bridge.java \
+        termux-result/src/main/java/io/github/mbanucu/termux/*.java \
+        termux-run-command/src/main/java/io/github/mbanucu/termux/*.java \
+        >out/javac.log 2>&1; then
+  cat out/javac.log >&2
+  exit 1
+fi
+grep -v "^warning:" out/javac.log || true
 ls out/classes/com/termux/adbbridge/
 
 echo "--- d8 ---"

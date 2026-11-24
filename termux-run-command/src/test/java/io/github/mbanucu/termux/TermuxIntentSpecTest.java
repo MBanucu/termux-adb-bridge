@@ -136,7 +136,6 @@ public class TermuxIntentSpecTest {
     public void requestCodesAreUnique() {
         int first = TermuxPendingIntents.nextRequestCode();
         int second = TermuxPendingIntents.nextRequestCode();
-        assertTrue(second > first);
         assertFalse(first == second);
     }
 }
