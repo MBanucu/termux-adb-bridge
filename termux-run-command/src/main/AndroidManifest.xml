@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Termux declares this; the host app must be granted it before
+         RUN_COMMAND works. Merged into the consuming app. -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <application>
+        <!-- Result adapter for TermuxCommand's default service delivery.
+             Not exported: only a PendingIntent created by the host can start it. -->
+        <service
+            android:name="io.github.mbanucu.termux.TermuxResultService"
+            android:exported="false" />
+    </application>
+</manifest>

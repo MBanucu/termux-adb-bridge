@@ -1,3 +1,13 @@
 # nix build output
 result
 result-*
+
+# Gradle (the library modules; build.sh and Nix do not use these)
+.gradle/
+local.properties
+build/
+*/build/
+
+# on-phone build output / signing key
+out/
+keystore.jks

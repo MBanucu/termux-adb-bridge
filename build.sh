@@ -22,12 +22,25 @@ echo "--- aapt2 link ---"
 "$AAPT2" link -o out/base.apk -I "$ANDROID_JAR" --manifest AndroidManifest.xml
 
 echo "--- javac ---"
-javac -source 8 -target 8 -bootclasspath "$ANDROID_JAR" \
-      -d out/classes src/com/termux/adbbridge/Bridge.java 2>&1 | grep -v "^warning:" || true
+# Bridge and the two library modules; keep the source level at 8 so the same
+# files compile here and in the Gradle build. Capture the compiler output rather
+# than piping it through grep: a pipeline would hide a failed javac and let the
+# build package whatever old classes happened to be there.
+if ! javac -source 8 -target 8 -bootclasspath "$ANDROID_JAR" \
+        -d out/classes \
+        src/com/termux/adbbridge/Bridge.java \
+        termux-result/src/main/java/io/github/mbanucu/termux/*.java \
+        termux-run-command/src/main/java/io/github/mbanucu/termux/*.java \
+        >out/javac.log 2>&1; then
+  cat out/javac.log >&2
+  exit 1
+fi
+grep -v "^warning:" out/javac.log || true
 ls out/classes/com/termux/adbbridge/
 
 echo "--- d8 ---"
-"$D8" --lib "$ANDROID_JAR" --min-api 21 --output out out/classes/com/termux/adbbridge/*.class
+"$D8" --lib "$ANDROID_JAR" --min-api 21 --output out \
+      $(find out/classes -name '*.class')
 
 echo "--- package dex into apk ---"
 ( cd out && jar uf base.apk classes.dex && ls -l base.apk )

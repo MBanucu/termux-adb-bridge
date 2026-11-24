@@ -2,8 +2,10 @@ package com.termux.adbbridge;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
+
+import io.github.mbanucu.termux.TermuxCommand;
+import io.github.mbanucu.termux.TermuxContract;
 
 /**
  * Triggered with:
@@ -20,14 +22,11 @@ import android.os.Bundle;
  * firmware's BVPFW AppAutoStartupPolicy blocks background receiver starts
  * ("prevent start receiver of package ..."), while an explicitly started
  * activity goes through.
+ *
+ * The intent itself now comes from the termux-run-command library, which is
+ * compiled into this APK by build.sh and by nix/apk.nix.
  */
 public class Bridge extends Activity {
-
-    private static final String TERMUX_PKG = "com.termux";
-    private static final String TERMUX_SERVICE = "com.termux.app.RunCommandService";
-    private static final String ACTION_RUN_COMMAND = "com.termux.RUN_COMMAND";
-    private static final String TERMUX_SH = "/data/data/com.termux/files/usr/bin/sh";
-    private static final String TERMUX_WORKDIR = "/data/data/com.termux/files/home";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,20 +51,14 @@ public class Bridge extends Activity {
             return;
         }
 
-        Intent run = new Intent();
-        run.setClassName(TERMUX_PKG, TERMUX_SERVICE);
-        run.setAction(ACTION_RUN_COMMAND);
-        run.putExtra("com.termux.RUN_COMMAND_PATH", TERMUX_SH);
-        run.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c", cmd});
-        run.putExtra("com.termux.RUN_COMMAND_WORKDIR", TERMUX_WORKDIR);
-        run.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
-        run.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
-        run.putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "adb");
-
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(run);
-        } else {
-            startService(run);
-        }
+        TermuxCommand.builder(this)
+                .script(TermuxContract.DEFAULT_SH)
+                .args("-c", cmd)
+                .workdir(TermuxContract.DEFAULT_HOME)
+                .background(true)
+                .sessionAction(0)
+                .label("adb")
+                .foregroundService(true)
+                .send();
     }
 }

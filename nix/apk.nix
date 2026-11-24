@@ -50,7 +50,8 @@ pkgs.stdenv.mkDerivation {
       --manifest AndroidManifest.xml
 
     echo "--- javac ---"
-    find src -name '*.java' -print > sources.txt
+    find src termux-result/src/main/java termux-run-command/src/main/java \
+      -name '*.java' -print > sources.txt
     ${pkgs.jdk}/bin/javac -source 8 -target 8 \
       -bootclasspath ${androidJar} \
       -d out/classes @sources.txt
