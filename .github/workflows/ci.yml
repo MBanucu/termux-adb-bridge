@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-guard:
+    name: RUN_COMMAND contract guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if an extra key was re-typed outside the library
+        run: bash scripts/check-run-command-constants.sh
+
+  gradle:
+    name: Gradle modules and publication metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install the compile platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Device-free tests and release artifacts
+        run: |
+          ./gradlew --no-daemon \
+            :termux-result:build \
+            :termux-run-command:testReleaseUnitTest \
+            :termux-run-command:assembleRelease \
+            :termux-result:generatePomFileForReleasePublication \
+            :termux-run-command:generatePomFileForReleasePublication \
+            :termux-result:javadocJar \
+            :termux-run-command:javadocJar
